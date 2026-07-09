@@ -56,7 +56,69 @@ D:\222
 
 ## 运行方式
 
-后端：
+这个项目要支持“别人从 GitHub 拉下来，在自己电脑本地部署运行”。推荐的本地部署地址是：
+
+```text
+http://127.0.0.1:5050
+```
+
+### 一键本地部署
+
+从 GitHub 拉代码：
+
+```powershell
+git clone https://github.com/biounm2/-.git structured-study-notes
+cd structured-study-notes
+```
+
+准备环境变量：
+
+```powershell
+copy backend\.env.example backend\.env
+```
+
+安装依赖、构建前端并启动服务：
+
+```powershell
+pnpm run deploy:local
+```
+
+运行前要确认 MongoDB 已经启动；默认连接地址是 `mongodb://localhost:27017/note-summary`。
+
+成功后打开：
+
+```text
+http://127.0.0.1:5050
+```
+
+`pnpm run deploy:local` 会依次执行：
+
+1. `pnpm --dir backend install`
+2. `pnpm --dir frontend install`
+3. `pnpm --dir frontend build`
+4. `pnpm --dir backend start`
+
+后端会自动托管 `frontend/dist`，所以本地部署模式下不需要单独启动 Vite。
+
+### 局域网访问
+
+如果要让同一 Wi-Fi 下的其他设备访问，把 `backend/.env` 改成：
+
+```text
+MONGODB_URI=mongodb://localhost:27017/note-summary
+HOST=0.0.0.0
+PORT=5050
+```
+
+然后用当前电脑的局域网 IP 访问，例如：
+
+```text
+http://192.168.1.23:5050
+```
+
+### 开发模式
+
+后端开发：
 
 ```powershell
 cd D:\222\backend
@@ -64,7 +126,7 @@ pnpm install
 pnpm run dev
 ```
 
-前端：
+前端开发：
 
 ```powershell
 cd D:\222\frontend
@@ -76,7 +138,8 @@ pnpm run dev
 
 ```text
 MONGODB_URI=mongodb://localhost:27017/note-summary
-PORT=3000
+HOST=127.0.0.1
+PORT=5050
 ```
 
 ## 重要接口

@@ -1,0 +1,15 @@
+{
+  "name": "structured-study-notes",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Local structured study note organizer",
+  "scripts": {
+    "setup": "pnpm --dir backend install && pnpm --dir frontend install",
+    "build": "pnpm --dir frontend build",
+    "start": "pnpm --dir backend start",
+    "dev:backend": "pnpm --dir backend run dev",
+    "dev:frontend": "pnpm --dir frontend run dev",
+    "deploy:local": "pnpm run setup && pnpm run build && pnpm run start"
+  },
+  "packageManager": "pnpm@11.7.0"
+}

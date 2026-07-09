@@ -65,14 +65,56 @@
 - pnpm
 - MongoDB
 
+先确保 MongoDB 已经在本机运行。
+
 后端环境变量放在 `backend/.env`，这个文件不要提交到 GitHub。
 
 ```text
 MONGODB_URI=mongodb://localhost:27017/note-summary
-PORT=3000
+HOST=127.0.0.1
+PORT=5050
 ```
 
-## 启动后端
+## 本地部署运行
+
+别人从 GitHub 拉下来以后，可以按下面步骤在自己电脑本地部署。
+
+```powershell
+git clone https://github.com/biounm2/-.git structured-study-notes
+cd structured-study-notes
+copy backend\.env.example backend\.env
+pnpm run deploy:local
+```
+
+启动成功后打开：
+
+```text
+http://127.0.0.1:5050
+```
+
+`pnpm run deploy:local` 会做三件事：
+
+1. 安装后端依赖。
+2. 安装前端依赖并构建前端。
+3. 启动后端服务，并由后端托管前端页面。
+
+如果想让同一局域网里的其他设备访问，把 `backend/.env` 里的 `HOST` 改成：
+
+```text
+HOST=0.0.0.0
+```
+
+然后用这台电脑的局域网 IP 加端口访问，例如：
+
+```text
+http://192.168.1.23:5050
+```
+
+## 开发模式
+
+开发时可以前后端分开启动。
+
+后端：
 
 ```powershell
 cd backend
@@ -83,10 +125,10 @@ pnpm run dev
 默认后端地址：
 
 ```text
-http://localhost:3000
+http://127.0.0.1:5050
 ```
 
-## 启动前端
+前端：
 
 ```powershell
 cd frontend
@@ -100,7 +142,7 @@ pnpm run dev
 http://localhost:5173
 ```
 
-前端开发服务器会把 `/api` 请求代理到后端 `http://localhost:3000`。
+前端开发服务器会把 `/api` 请求代理到后端 `http://127.0.0.1:5050`。
 
 ## 怎么使用
 
