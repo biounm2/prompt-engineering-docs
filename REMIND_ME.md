@@ -2,17 +2,15 @@
 
 ## 项目概览
 
-这个文件夹是一个“课堂笔记总结应用”。项目采用前后端分离结构：
+这个项目已经从“录音 + AI 总结 + 出题”收窄成“课堂资料结构化整理工具”。
 
-- `backend/`：Express API 服务，使用 Mongoose 连接 MongoDB。
-- `frontend/`：Vue 3 + Vite 前端应用，UI 使用 Element Plus。
+新的使用方式是：
 
-核心流程：
-
-1. 用户可以手动输入、录音或拍照来创建笔记。
-2. 笔记会保存课程、正文、标签、总结、音频、图片、知识点和练习题。
-3. 后端通过豆包 API 对笔记内容进行总结、知识点提取和练习题生成。
-4. 前端提供笔记列表、笔记详情、知识点查看和练习题作答。
+1. 用户先用豆包的“录音纪要”能力完成录音和转文字。
+2. 用户把豆包导出的文字纪要、Markdown 文件、零散课堂笔记导入本工具。
+3. 如果有板书、课件、手写笔记，用户可以上传图片或用摄像头拍照。
+4. 本工具不调用外部 API，只在前端本地用规则整理核心摘要、知识点和结构化复习文档。
+5. 后端负责保存文档、知识点和附件。
 
 ## 当前目录结构
 
@@ -22,13 +20,11 @@ D:\222
   README.md
   REMIND_ME.md
   backend
-    .env                  # 已忽略，存放运行密钥，不要提交
+    .env                  # 已忽略，存放 MongoDB 等运行配置
     models
-      Note.js             # 笔记、知识点、题目、媒体 URL 的 Mongoose 模型
+      Note.js             # 文档、知识点、附件、图片 URL 的 Mongoose 模型
     routes
-      notes.js            # 笔记 CRUD、上传、AI 生成接口
-    utils
-      doubao.js           # 豆包语音和对话 API 封装
+      notes.js            # 文档 CRUD、文件上传、图片上传接口
     server.js             # Express 入口、CORS、静态上传目录、MongoDB 连接
     package.json
     pnpm-lock.yaml
@@ -39,12 +35,11 @@ D:\222
       api
         note.ts           # Axios API 客户端
       components
-        AudioRecorder.vue # 录音、转写、AI 生成笔记组件
         PhotoCapture.vue  # 摄像头拍照、图片上传组件
       router
         index.ts          # 列表页、详情页、创建页路由
       utils
-        speechToText.ts   # Transformers.js Whisper 工具
+        structureNotes.ts # 本地结构化整理规则
       views
         NoteList.vue
         NoteCreate.vue
@@ -79,64 +74,46 @@ pnpm run dev
 
 ```text
 MONGODB_URI=mongodb://localhost:27017/note-summary
-DOUBAO_API_KEY=你的豆包APIKey
 PORT=3000
 ```
 
 ## 重要接口
 
-- `GET /api/notes`：获取笔记列表。
-- `GET /api/notes/:id`：获取单篇笔记。
-- `POST /api/notes`：创建笔记。
-- `PUT /api/notes/:id`：更新笔记。
-- `DELETE /api/notes/:id`：删除笔记。
-- `POST /api/notes/upload-audio`：上传音频。
-- `POST /api/notes/upload-image`：上传图片。
-- `POST /api/notes/generate-summary`：根据原始内容生成总结。
-- `POST /api/notes/generate-knowledge`：根据原始内容提取知识点。
-- `POST /api/notes/generate-questions`：根据原始内容生成练习题。
-- `POST /api/notes/:id/summary`：给已保存笔记重新生成总结。
-- `POST /api/notes/:id/knowledge`：给已保存笔记重新提取知识点。
-- `POST /api/notes/:id/questions`：给已保存笔记重新生成练习题。
+- `GET /api/notes`：获取文档列表。
+- `GET /api/notes/:id`：获取单篇文档。
+- `POST /api/notes`：保存结构化文档。
+- `PUT /api/notes/:id`：更新文档。
+- `DELETE /api/notes/:id`：删除文档。
+- `POST /api/notes/upload-file`：上传文字纪要或附件。
+- `POST /api/notes/upload-image`：上传图片资料。
 
-## 已完成的修复
+## 本次简化后的变化
 
-- 手动输入页的 AI 总结、知识点、练习题生成已经改为调用“原始内容生成接口”，不再传假的 `temp` 笔记 ID。
-- 拍照笔记的 `imageUrls` 已经能保存到后端。
-- 笔记详情页已经能展示保存的图片。
-- `AudioRecorder.vue` 里导入的 `transcribeAudio` 不再和本地函数重名。
-- `PhotoCapture.vue` 已经补充 `Camera` 图标导入。
-- 前端构建已通过。
-- 后端主要 JS 文件已做语法检查。
+- 移除了豆包 API 封装和后端 AI 生成接口。
+- 移除了实时录音组件和浏览器端 Whisper 语音识别依赖。
+- 移除了练习题/出题流程。
+- 创建页变成导入工具：导入文字纪要、粘贴零散笔记、上传图片或拍照。
+- 新增 `frontend/src/utils/structureNotes.ts`，用本地规则生成摘要、知识点和结构化文档。
+- 详情页只展示导入资料、图片、摘要、知识点和完整文档。
+
+## 当前限制
+
+- 不做语音识别。音频转文字交给豆包录音纪要。
+- 不做 OCR。图片只作为附件保存，图片内容需要用户手动补充文字说明。
+- 本地知识点整理是启发式规则，不是大模型语义理解。
 
 ## 后续优化清单
 
 最高优先级：
 
-- 后端增加请求参数校验。当前很多接口直接使用 `req.body`，上线前应使用 schema validator。
-- 上传接口增加文件大小限制和 MIME 类型过滤。当前 `multer` 接收范围太宽。
-- 把前后端重复的 AI 生成逻辑抽成共享函数或服务层。
-- 改善 AI 调用失败时的错误提示，不要只用 `alert()` 或返回空数组。
-- 把前端的 `window.location.href` 改成 Vue Router 跳转，避免整个 SPA 刷新。
-- 优化前端包体积。当前构建能通过，但 Vite 提醒主 JS chunk 超过 2 MB，主要原因是语音模型相关依赖进入了首屏包。
+- 增加 Markdown / PDF 导出，让整理结果可以直接交作业或复习。
+- 支持 `.docx`、`.pdf`、`.srt`、`.vtt` 等更多导入格式。
+- 为 `structureNotes.ts` 增加更多模板，例如“课堂笔记”“读书笔记”“会议纪要”。
+- 增加文档编辑功能，允许保存后继续调整标题、摘要、知识点和正文。
+- 增加上传文件类型白名单和更清晰的错误提示。
 
-功能正确性：
+可以后做：
 
-- 明确语音转文字到底走浏览器端还是后端。现在两条路径都存在，但前端主要使用浏览器端转写。
-- 检查 `frontend/src/utils/speechToText.ts` 的音频处理方式，直接把音频字节转成 `Float32Array` 可能不是 Transformers.js 期望的波形输入。
-- 录音笔记页需要加课程输入框，不要再从 `document.querySelector('[name="course"]')` 读取，因为当前没有稳定匹配的字段。
-- 补完整详情页的编辑功能，`editNote()` 现在还是空实现。
-- 笔记列表和详情页应该增加加载状态、空状态和错误状态。
-
-安全和运维：
-
-- `backend/.env` 必须继续忽略，不能提交 API Key。
-- 建议新增 `.env.example`，说明必需环境变量。
-- 上传接口响应里如果前端不需要，就不要返回服务器本地文件路径 `req.file.path`。
-- 如果以后多人使用，需要增加认证和权限控制；当前所有 API 都是公开的。
-
-测试：
-
-- 增加后端接口测试，覆盖笔记 CRUD、上传和 AI 生成接口。
-- 增加前端测试，覆盖创建笔记、展示知识点和答题流程。
-- 增加 CI，至少跑前端 `pnpm run build` 和后端语法/测试检查。
+- 增加可选本地 OCR。
+- 增加搜索和按课程筛选。
+- 增加测试和 CI。

@@ -1,27 +1,5 @@
 const mongoose = require('mongoose')
 
-const questionSchema = new mongoose.Schema({
-  type: {
-    type: String,
-    enum: ['single', 'multiple', 'judge', 'fill', 'short'],
-    default: 'single'
-  },
-  question: {
-    type: String,
-    required: true
-  },
-  options: [{
-    type: String
-  }],
-  answer: {
-    type: String,
-    required: true
-  },
-  analysis: {
-    type: String
-  }
-})
-
 const knowledgePointSchema = new mongoose.Schema({
   title: {
     type: String,
@@ -66,11 +44,20 @@ const noteSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  sourceType: {
+    type: String,
+    enum: ['text', 'image', 'mixed'],
+    default: 'text'
+  },
+  sourceFiles: [{
+    name: String,
+    url: String,
+    type: String
+  }],
   imageUrls: [{
     type: String
   }],
   knowledgePoints: [knowledgePointSchema],
-  questions: [questionSchema],
   createdAt: {
     type: Date,
     default: Date.now

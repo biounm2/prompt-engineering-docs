@@ -66,12 +66,12 @@
         </div>
       </div>
       
-      <button 
-        class="btn-upload" 
+      <button
+        class="btn-upload"
         @click="uploadImages"
         :disabled="uploading"
       >
-        {{ uploading ? '上传中...' : '上传照片并生成笔记' }}
+        {{ uploading ? '上传中...' : '上传照片资料' }}
       </button>
     </div>
   </div>

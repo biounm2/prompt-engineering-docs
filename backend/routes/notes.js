@@ -4,7 +4,6 @@ const multer = require('multer')
 const path = require('path')
 const fs = require('fs')
 const Note = require('../models/Note')
-const doubao = require('../utils/doubao')
 
 const uploadDir = path.join(__dirname, '../uploads')
 if (!fs.existsSync(uploadDir)) {
@@ -21,7 +20,12 @@ const storage = multer.diskStorage({
   }
 })
 
-const upload = multer({ storage: storage })
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 25 * 1024 * 1024
+  }
+})
 
 router.get('/', async (req, res) => {
   try {
@@ -53,9 +57,10 @@ router.post('/', async (req, res) => {
     summary: req.body.summary || '',
     audioUrl: req.body.audioUrl || '',
     transcription: req.body.transcription || '',
+    sourceType: req.body.sourceType || 'text',
+    sourceFiles: req.body.sourceFiles || [],
     imageUrls: req.body.imageUrls || [],
-    knowledgePoints: req.body.knowledgePoints || [],
-    questions: req.body.questions || []
+    knowledgePoints: req.body.knowledgePoints || []
   })
 
   try {
@@ -66,85 +71,22 @@ router.post('/', async (req, res) => {
   }
 })
 
-router.post('/upload-audio', upload.single('audio'), async (req, res) => {
+router.post('/upload-file', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ message: 'No audio file uploaded' })
+      return res.status(400).json({ message: 'No file uploaded' })
     }
 
-    const audioUrl = `/uploads/${req.file.filename}`
+    const fileUrl = `/uploads/${req.file.filename}`
 
     res.json({
       success: true,
-      audioUrl,
+      fileUrl,
       filename: req.file.filename,
-      path: req.file.path
+      originalName: req.file.originalname,
+      type: req.file.mimetype
     })
   } catch (err) {
-    res.status(500).json({ message: err.message })
-  }
-})
-
-router.post('/process-audio', async (req, res) => {
-  const { audioPath, course } = req.body
-
-  if (!audioPath) {
-    return res.status(400).json({ message: 'audioPath is required' })
-  }
-
-  try {
-    res.writeHead(200, {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive'
-    })
-
-    const sendProgress = (step, message, data = {}) => {
-      res.write(`data: ${JSON.stringify({ step, message, data })}\n\n`)
-    }
-
-    sendProgress('transcribing', '正在进行语音转文字...')
-    const transcription = await doubao.speechToText(audioPath)
-
-    if (!transcription) {
-      sendProgress('error', '语音转文字失败，请重试')
-      res.end()
-      return
-    }
-
-    sendProgress('transcribed', '语音转文字完成', { transcription })
-
-    sendProgress('summarizing', '正在生成总结...')
-    const summary = await doubao.summarize(transcription)
-    sendProgress('summarized', '总结生成完成', { summary })
-
-    sendProgress('extracting', '正在提取知识点...')
-    const knowledgePoints = await doubao.extractKnowledgePoints(transcription)
-    sendProgress('extracted', '知识点提取完成', { knowledgePoints })
-
-    sendProgress('generating', '正在生成练习题...')
-    const questions = await doubao.generateQuestions(transcription, 5)
-    sendProgress('generated', '练习题生成完成', { questions })
-
-    const note = new Note({
-      title: `${course} - ${new Date().toLocaleDateString()}`,
-      content: transcription,
-      course: course,
-      tags: [],
-      summary: summary,
-      audioUrl: `/uploads/${path.basename(audioPath)}`,
-      transcription: transcription,
-      knowledgePoints: knowledgePoints,
-      questions: questions
-    })
-
-    const savedNote = await note.save()
-
-    sendProgress('completed', '处理完成', { noteId: savedNote._id, note: savedNote })
-    res.end()
-
-  } catch (err) {
-    console.error('处理音频失败:', err)
     res.status(500).json({ message: err.message })
   }
 })
@@ -177,99 +119,6 @@ router.delete('/:id', async (req, res) => {
   }
 })
 
-router.post('/:id/summary', async (req, res) => {
-  try {
-    const note = await Note.findById(req.params.id)
-    if (!note) {
-      return res.status(404).json({ message: 'Note not found' })
-    }
-
-    const summary = await doubao.summarize(note.content)
-    note.summary = summary
-    await note.save()
-
-    res.json({ summary })
-  } catch (err) {
-    res.status(500).json({ message: err.message })
-  }
-})
-
-router.post('/:id/knowledge', async (req, res) => {
-  try {
-    const note = await Note.findById(req.params.id)
-    if (!note) {
-      return res.status(404).json({ message: 'Note not found' })
-    }
-
-    const knowledgePoints = await doubao.extractKnowledgePoints(note.content)
-    note.knowledgePoints = knowledgePoints
-    await note.save()
-
-    res.json({ knowledgePoints })
-  } catch (err) {
-    res.status(500).json({ message: err.message })
-  }
-})
-
-router.post('/:id/questions', async (req, res) => {
-  try {
-    const note = await Note.findById(req.params.id)
-    if (!note) {
-      return res.status(404).json({ message: 'Note not found' })
-    }
-
-    const questions = await doubao.generateQuestions(note.content, req.body.count || 5)
-    note.questions = questions
-    await note.save()
-
-    res.json({ questions })
-  } catch (err) {
-    res.status(500).json({ message: err.message })
-  }
-})
-
-router.post('/generate-summary', async (req, res) => {
-  try {
-    const { content } = req.body
-    if (!content) {
-      return res.status(400).json({ message: 'content is required' })
-    }
-
-    const summary = await doubao.summarize(content)
-    res.json({ summary })
-  } catch (err) {
-    res.status(500).json({ message: err.message })
-  }
-})
-
-router.post('/generate-knowledge', async (req, res) => {
-  try {
-    const { content } = req.body
-    if (!content) {
-      return res.status(400).json({ message: 'content is required' })
-    }
-
-    const knowledgePoints = await doubao.extractKnowledgePoints(content)
-    res.json({ knowledgePoints })
-  } catch (err) {
-    res.status(500).json({ message: err.message })
-  }
-})
-
-router.post('/generate-questions', async (req, res) => {
-  try {
-    const { content, count = 5 } = req.body
-    if (!content) {
-      return res.status(400).json({ message: 'content is required' })
-    }
-
-    const questions = await doubao.generateQuestions(content, count)
-    res.json({ questions })
-  } catch (err) {
-    res.status(500).json({ message: err.message })
-  }
-})
-
 router.post('/upload-image', upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
@@ -282,7 +131,8 @@ router.post('/upload-image', upload.single('image'), async (req, res) => {
       success: true,
       imageUrl,
       filename: req.file.filename,
-      path: req.file.path
+      originalName: req.file.originalname,
+      type: req.file.mimetype
     })
   } catch (err) {
     res.status(500).json({ message: err.message })

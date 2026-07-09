@@ -4,18 +4,30 @@
 
     <el-card v-if="note">
       <div class="detail-header">
-        <el-tag size="large" type="primary">{{ note.course }}</el-tag>
+        <div>
+          <el-tag size="large" type="primary">{{ note.course }}</el-tag>
+          <h2 class="detail-title">{{ note.title }}</h2>
+        </div>
         <span class="date">{{ formatDate(note.createdAt) }}</span>
       </div>
-      <h2 class="detail-title">{{ note.title }}</h2>
 
       <div class="tags">
         <el-tag v-for="tag in note.tags" :key="tag">{{ tag }}</el-tag>
       </div>
 
-      <div v-if="note.audioUrl" class="audio-section">
-        <h3>录音文件</h3>
-        <audio :src="note.audioUrl" controls />
+      <div v-if="note.sourceFiles && note.sourceFiles.length > 0" class="source-section">
+        <h3>导入资料</h3>
+        <div class="source-list">
+          <a
+            v-for="file in note.sourceFiles"
+            :key="file.url"
+            :href="file.url"
+            target="_blank"
+            rel="noreferrer"
+          >
+            {{ file.name }}
+          </a>
+        </div>
       </div>
 
       <div v-if="note.imageUrls && note.imageUrls.length > 0" class="image-section">
@@ -25,105 +37,32 @@
         </div>
       </div>
 
-      <div class="detail-content">
-        <h3>笔记内容</h3>
-        <p>{{ note.content }}</p>
+      <div v-if="note.summary" class="summary">
+        <h3>核心摘要</h3>
+        <pre>{{ note.summary }}</pre>
       </div>
 
-      <div class="summary" v-if="note.summary">
-        <h3>AI总结</h3>
-        <el-alert :title="note.summary" type="success" show-icon />
-      </div>
-
-      <div class="knowledge-section" v-if="note.knowledgePoints && note.knowledgePoints.length > 0">
-        <div class="section-header">
-          <h3>知识点</h3>
-          <el-button v-if="!note.knowledgePoints.length" type="primary" @click="extractKnowledge">提取知识点</el-button>
-        </div>
-        <el-timeline>
-          <el-timeline-item
-            v-for="(kp, index) in note.knowledgePoints"
-            :key="index"
-            :type="getImportanceType(kp.importance)"
-          >
-            <div class="kp-card">
-              <div class="kp-header">
-                <span class="kp-title">{{ kp.title }}</span>
-                <el-tag :type="getImportanceType(kp.importance)" size="small">
-                  {{ getImportanceLabel(kp.importance) }}
-                </el-tag>
-              </div>
-              <div class="kp-content">{{ kp.content }}</div>
+      <div v-if="note.knowledgePoints && note.knowledgePoints.length > 0" class="knowledge-section">
+        <h3>知识点</h3>
+        <div class="knowledge-grid">
+          <div v-for="point in note.knowledgePoints" :key="point.title" class="knowledge-card">
+            <div class="knowledge-header">
+              <span>{{ point.title }}</span>
+              <el-tag :type="getImportanceType(point.importance)" size="small">
+                {{ getImportanceLabel(point.importance) }}
+              </el-tag>
             </div>
-          </el-timeline-item>
-        </el-timeline>
-      </div>
-
-      <div class="questions-section" v-if="note.questions && note.questions.length > 0">
-        <div class="section-header">
-          <h3>练习题</h3>
-          <el-button v-if="!note.questions.length" type="primary" @click="generateQuestions">生成练习题</el-button>
-        </div>
-
-        <el-steps :active="currentQuestion" finish-status="success" align-center>
-          <el-step
-            v-for="(q, index) in note.questions"
-            :key="index"
-            :title="getQuestionTypeName(q.type)"
-          />
-        </el-steps>
-
-        <div class="question-container">
-          <div v-if="currentQuizQuestion" class="current-question">
-            <div class="question-header">
-              <span class="question-type">{{ getQuestionTypeName(currentQuizQuestion.type) }}</span>
-              <span class="question-number">第{{ currentQuestion + 1 }}/{{ note.questions.length }}题</span>
-            </div>
-            <div class="question-content">{{ currentQuizQuestion.question }}</div>
-
-            <div v-if="currentQuizQuestion.options && currentQuizQuestion.options.length > 0" class="question-options">
-              <div
-                v-for="(opt, optIndex) in currentQuizQuestion.options"
-                :key="optIndex"
-                class="option-item"
-                :class="{ 'selected': selectedAnswer === optIndex, 'correct': showAnswer && isCorrectOption(optIndex) }"
-                @click="selectOption(optIndex)"
-              >
-                {{ String.fromCharCode(65 + optIndex) }}. {{ opt }}
-              </div>
-            </div>
-
-            <div v-if="showAnswer" class="question-result">
-              <div class="answer-section">
-                <span class="answer-label">正确答案：</span>
-                <span class="answer-value">{{ currentQuizQuestion.answer }}</span>
-              </div>
-              <div v-if="currentQuizQuestion.analysis" class="analysis-section">
-                <span class="analysis-label">解析：</span>
-                <span>{{ currentQuizQuestion.analysis }}</span>
-              </div>
-            </div>
-
-            <div class="question-actions">
-              <button v-if="!showAnswer" class="btn-submit" @click="submitAnswer">提交答案</button>
-              <button v-if="showAnswer" class="btn-next" @click="nextQuestion">下一题</button>
-            </div>
-          </div>
-
-          <div v-else class="quiz-complete">
-            <el-alert title="恭喜！你已完成所有练习题" type="success" show-icon />
-            <div class="score-display">
-              <span class="score-label">得分：</span>
-              <span class="score-value">{{ score }}/{{ note.questions.length * 20 }}</span>
-            </div>
-            <el-button type="primary" @click="resetQuiz">重新做题</el-button>
+            <p>{{ point.content }}</p>
           </div>
         </div>
+      </div>
+
+      <div class="document-section">
+        <h3>结构化文档</h3>
+        <pre>{{ note.content }}</pre>
       </div>
 
       <div class="actions">
-        <el-button type="primary" @click="generateSummary">生成总结</el-button>
-        <el-button type="warning" @click="editNote">编辑</el-button>
         <el-button type="danger" @click="deleteNote">删除</el-button>
       </div>
     </el-card>
@@ -131,9 +70,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { getNote, generateNoteSummary, extractNoteKnowledge, generateNoteQuestions, deleteNote as deleteNoteApi } from '../api/note'
+import { deleteNote as deleteNoteApi, getNote } from '../api/note'
 
 interface KnowledgePoint {
   title: string
@@ -141,12 +80,10 @@ interface KnowledgePoint {
   importance: string
 }
 
-interface Question {
+interface SourceFile {
+  name: string
+  url: string
   type: string
-  question: string
-  options?: string[]
-  answer: string
-  analysis?: string
 }
 
 interface Note {
@@ -156,21 +93,14 @@ interface Note {
   course: string
   tags: string[]
   summary: string
-  audioUrl: string
-  transcription: string
+  sourceFiles: SourceFile[]
   imageUrls: string[]
   knowledgePoints: KnowledgePoint[]
-  questions: Question[]
   createdAt: string
 }
 
 const route = useRoute()
 const note = ref<Note | null>(null)
-const currentQuestion = ref(0)
-const selectedAnswer = ref<number | null>(null)
-const showAnswer = ref(false)
-const score = ref(0)
-const currentQuizQuestion = computed(() => note.value?.questions?.[currentQuestion.value])
 
 onMounted(async () => {
   const id = route.params.id as string
@@ -178,71 +108,10 @@ onMounted(async () => {
   note.value = response.data
 })
 
-const generateSummary = async () => {
-  if (!note.value) return
-  const response = await generateNoteSummary(note.value._id)
-  note.value!.summary = response.data.summary
-}
-
-const extractKnowledge = async () => {
-  if (!note.value) return
-  const response = await extractNoteKnowledge(note.value._id)
-  note.value!.knowledgePoints = response.data.knowledgePoints
-}
-
-const generateQuestions = async () => {
-  if (!note.value) return
-  const response = await generateNoteQuestions(note.value._id)
-  note.value!.questions = response.data.questions
-  resetQuiz()
-}
-
-const editNote = () => {
-  if (!note.value) return
-}
-
 const deleteNote = async () => {
   if (!note.value) return
   await deleteNoteApi(note.value._id)
   window.location.href = '/'
-}
-
-const selectOption = (index: number) => {
-  if (showAnswer.value) return
-  selectedAnswer.value = index
-}
-
-const submitAnswer = () => {
-  if (selectedAnswer.value === null) return
-
-  const currentQ = currentQuizQuestion.value
-  if (!currentQ) return
-  const selectedOption = currentQ.options?.[selectedAnswer.value]
-
-  if (selectedOption && currentQ.answer.includes(String.fromCharCode(65 + selectedAnswer.value))) {
-    score.value += 20
-  }
-
-  showAnswer.value = true
-}
-
-const nextQuestion = () => {
-  currentQuestion.value++
-  selectedAnswer.value = null
-  showAnswer.value = false
-}
-
-const resetQuiz = () => {
-  currentQuestion.value = 0
-  selectedAnswer.value = null
-  showAnswer.value = false
-  score.value = 0
-}
-
-const isCorrectOption = (index: number) => {
-  const currentQ = currentQuizQuestion.value
-  if (!currentQ) return false
-  return currentQ.answer.includes(String.fromCharCode(65 + index))
 }
 
 const formatDate = (dateStr: string) => {
@@ -254,28 +123,15 @@ const getImportanceType = (importance: string) => {
   switch (importance) {
     case 'high': return 'danger'
     case 'medium': return 'warning'
-    case 'low': return 'info'
     default: return 'info'
   }
 }
 
 const getImportanceLabel = (importance: string) => {
   switch (importance) {
-    case 'high': return '重要'
+    case 'high': return '重点'
     case 'medium': return '一般'
-    case 'low': return '了解'
-    default: return '一般'
-  }
-}
-
-const getQuestionTypeName = (type: string) => {
-  switch (type) {
-    case 'single': return '单选题'
-    case 'multiple': return '多选题'
-    case 'judge': return '判断题'
-    case 'fill': return '填空题'
-    case 'short': return '简答题'
-    default: return '未知题型'
+    default: return '补充'
   }
 }
 </script>
@@ -283,15 +139,22 @@ const getQuestionTypeName = (type: string) => {
 <style scoped>
 .note-detail {
   padding: 20px;
-  max-width: 1000px;
+  max-width: 1080px;
   margin: 0 auto;
 }
 
 .detail-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.detail-title {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 12px 0 0;
 }
 
 .date {
@@ -299,42 +162,33 @@ const getQuestionTypeName = (type: string) => {
   color: #999;
 }
 
-.detail-title {
-  font-size: 28px;
-  font-weight: bold;
-  margin-bottom: 15px;
-}
-
-.tags {
+.tags,
+.source-list {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  margin-bottom: 30px;
+  margin-bottom: 24px;
 }
 
-.audio-section {
-  margin-bottom: 30px;
-  padding: 15px;
-  background: #f8f9fa;
+.source-list a {
+  color: #409eff;
+  text-decoration: none;
+  padding: 8px 10px;
+  background: #f4f8ff;
   border-radius: 8px;
 }
 
-.audio-section h3 {
-  font-size: 18px;
-  margin-bottom: 10px;
-  color: #333;
+.source-section,
+.image-section,
+.summary,
+.knowledge-section,
+.document-section {
+  margin-bottom: 28px;
 }
 
-.image-section {
-  margin-bottom: 30px;
-  padding: 15px;
-  background: #f8f9fa;
-  border-radius: 8px;
-}
-
-.image-section h3 {
-  font-size: 18px;
-  margin-bottom: 10px;
+h3 {
+  font-size: 20px;
+  margin-bottom: 14px;
   color: #333;
 }
 
@@ -351,200 +205,41 @@ const getQuestionTypeName = (type: string) => {
   border-radius: 8px;
 }
 
-.detail-content {
-  margin-bottom: 30px;
+.knowledge-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
 }
 
-.detail-content h3 {
-  font-size: 20px;
-  margin-bottom: 15px;
-  color: #333;
-}
-
-.detail-content p {
-  font-size: 16px;
-  line-height: 1.8;
-  color: #666;
-}
-
-.summary {
-  margin-bottom: 30px;
-}
-
-.summary h3 {
-  font-size: 20px;
-  margin-bottom: 15px;
-  color: #333;
-}
-
-.knowledge-section, .questions-section {
-  margin-bottom: 30px;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.section-header h3 {
-  font-size: 20px;
-  color: #333;
-}
-
-.kp-card {
-  padding: 15px;
-  background: white;
+.knowledge-card {
+  border: 1px solid #e5e7eb;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  padding: 14px;
+  background: #fff;
 }
 
-.kp-header {
+.knowledge-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  gap: 12px;
+  font-weight: 600;
 }
 
-.kp-title {
-  font-weight: bold;
-  font-size: 16px;
-}
-
-.kp-content {
-  font-size: 14px;
-  color: #666;
+.knowledge-card p {
+  margin: 10px 0 0;
+  color: #555;
   line-height: 1.6;
 }
 
-.question-container {
-  margin-top: 20px;
-}
-
-.current-question {
-  padding: 20px;
-  background: #f8f9fa;
-  border-radius: 10px;
-}
-
-.question-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-}
-
-.question-type {
-  font-weight: bold;
-  color: #409eff;
-}
-
-.question-number {
-  font-size: 14px;
-  color: #666;
-}
-
-.question-content {
-  font-size: 18px;
-  margin-bottom: 20px;
-  color: #333;
-}
-
-.question-options {
-  margin-bottom: 20px;
-}
-
-.option-item {
-  padding: 12px 15px;
-  margin-bottom: 10px;
-  background: white;
+pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+  padding: 16px;
+  background: #f7f8fa;
   border-radius: 8px;
-  border: 2px solid #e9ecef;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.option-item:hover {
-  border-color: #409eff;
-}
-
-.option-item.selected {
-  border-color: #409eff;
-  background: #e6f7ff;
-}
-
-.option-item.correct {
-  border-color: #67c23a;
-  background: #f0f9eb;
-}
-
-.question-result {
-  padding: 15px;
-  background: white;
-  border-radius: 8px;
-  margin-bottom: 20px;
-}
-
-.answer-section, .analysis-section {
-  margin-bottom: 10px;
-  font-size: 15px;
-}
-
-.answer-label, .analysis-label {
-  font-weight: bold;
-  color: #67c23a;
-}
-
-.answer-value {
-  font-weight: bold;
-}
-
-.question-actions {
-  display: flex;
-  gap: 10px;
-}
-
-.btn-submit, .btn-next {
-  padding: 10px 30px;
-  border: none;
-  border-radius: 30px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform 0.2s;
-}
-
-.btn-submit {
-  background: linear-gradient(135deg, #409eff 0%, #667eea 100%);
-  color: white;
-}
-
-.btn-next {
-  background: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);
-  color: white;
-}
-
-.quiz-complete {
-  text-align: center;
-  padding: 40px;
-  background: #f0f9eb;
-  border-radius: 10px;
-}
-
-.score-display {
-  margin: 20px 0;
-  font-size: 24px;
-}
-
-.score-label {
-  font-weight: bold;
-}
-
-.score-value {
-  font-weight: bold;
-  color: #67c23a;
-  font-size: 32px;
+  line-height: 1.7;
 }
 
 .actions {

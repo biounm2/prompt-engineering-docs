@@ -2,272 +2,225 @@
   <div class="note-create">
     <el-button @click="$router.back()" style="margin-bottom: 20px">返回列表</el-button>
 
-    <el-tabs v-model="activeTab" type="border-card">
-      <el-tab-pane label="录音笔记" name="audio">
-        <AudioRecorder
-          @processing-complete="handleProcessingComplete"
-          @progress="handleProgress"
-        />
-
-        <div v-if="processingResult" class="processing-result">
-          <h3>处理结果预览</h3>
-          <el-alert title="笔记已创建成功" type="success" show-icon />
-          <el-button type="primary" @click="viewNote(processingResult)">查看笔记详情</el-button>
-        </div>
-      </el-tab-pane>
-
-      <el-tab-pane label="拍照笔记" name="photo">
-        <PhotoCapture
-          @images-uploaded="handleImagesUploaded"
-        />
-
-        <div v-if="uploadedImages.length > 0" class="photo-note-form">
-          <el-form ref="photoFormRef" label-width="80px">
-            <el-form-item label="课程名称">
-              <el-input v-model="photoForm.course" placeholder="请输入课程名称" />
-            </el-form-item>
-            <el-form-item label="笔记标题">
-              <el-input v-model="photoForm.title" placeholder="请输入笔记标题" />
-            </el-form-item>
-            <el-form-item label="笔记内容">
-              <el-input v-model="photoForm.content" type="textarea" :rows="5" placeholder="请输入笔记内容（或基于照片描述）" />
-            </el-form-item>
-            <el-form-item>
-              <el-button type="primary" @click="savePhotoNote">保存笔记</el-button>
-              <el-button @click="generatePhotoSummary">AI自动总结</el-button>
-            </el-form-item>
-          </el-form>
-        </div>
-      </el-tab-pane>
-
-      <el-tab-pane label="手动输入" name="manual">
-        <el-form ref="formRef" :model="form" label-width="80px">
-          <el-form-item label="课程名称" required>
-            <el-input v-model="form.course" placeholder="请输入课程名称" />
-          </el-form-item>
-          <el-form-item label="笔记标题" required>
-            <el-input v-model="form.title" placeholder="请输入笔记标题" />
-          </el-form-item>
-          <el-form-item label="笔记内容" required>
-            <el-input v-model="form.content" type="textarea" :rows="10" placeholder="请输入笔记内容" />
-          </el-form-item>
-          <el-form-item label="标签">
-            <el-select v-model="form.tags" multiple placeholder="请选择标签" @change="handleTagChange">
-              <el-option v-for="tag in availableTags" :key="tag" :label="tag" :value="tag" />
-            </el-select>
-            <el-input v-model="newTag" placeholder="添加新标签" style="margin-top: 10px">
-              <template #append>
-                <el-button @click="addTag">添加</el-button>
-              </template>
-            </el-input>
-          </el-form-item>
-          <el-form-item>
-            <el-button type="primary" @click="submitForm">保存笔记</el-button>
-            <el-button @click="generateSummary">AI自动总结</el-button>
-            <el-button @click="extractKnowledge">提取知识点</el-button>
-            <el-button @click="generateQuestions">生成练习题</el-button>
-          </el-form-item>
-        </el-form>
-
-        <div v-if="form.summary" class="result-section">
-          <h3>AI总结</h3>
-          <el-alert :title="form.summary" type="success" show-icon />
-        </div>
-
-        <div v-if="knowledgePoints.length > 0" class="result-section">
-          <h3>知识点</h3>
-          <el-timeline>
-            <el-timeline-item
-              v-for="(kp, index) in knowledgePoints"
-              :key="index"
-              :type="getImportanceType(kp.importance)"
-            >
-              <div class="kp-title">{{ kp.title }}</div>
-              <div class="kp-content">{{ kp.content }}</div>
-            </el-timeline-item>
-          </el-timeline>
-        </div>
-
-        <div v-if="questions.length > 0" class="result-section">
-          <h3>练习题</h3>
-          <div v-for="(q, index) in questions" :key="index" class="question-card">
-            <div class="question-header">
-              <span class="question-type">{{ getQuestionTypeName(q.type) }}第{{ index + 1 }}题</span>
-            </div>
-            <div class="question-content">{{ q.question }}</div>
-            <div v-if="q.options && q.options.length > 0" class="question-options">
-              <div v-for="(opt, optIndex) in q.options" :key="optIndex" class="option-item">
-                {{ String.fromCharCode(65 + optIndex) }}. {{ opt }}
-              </div>
-            </div>
-            <div class="question-answer">
-              <span class="answer-label">答案：</span>
-              <span>{{ q.answer }}</span>
-            </div>
-            <div v-if="q.analysis" class="question-analysis">
-              <span class="analysis-label">解析：</span>
-              <span>{{ q.analysis }}</span>
-            </div>
+    <el-card>
+      <template #header>
+        <div class="header">
+          <div>
+            <h2>导入资料并整理知识点</h2>
+            <p>导入豆包录音纪要、课堂文字稿或图片资料，本地整理成结构化复习文档。</p>
           </div>
+          <el-tag type="success">无外部 API</el-tag>
         </div>
-      </el-tab-pane>
-    </el-tabs>
+      </template>
+
+      <el-form label-width="92px">
+        <el-form-item label="课程名称">
+          <el-input v-model="form.course" placeholder="例如：高等数学、计算机网络" />
+        </el-form-item>
+
+        <el-form-item label="文档标题">
+          <el-input v-model="form.title" placeholder="不填则从内容自动生成" />
+        </el-form-item>
+
+        <el-form-item label="导入文件">
+          <div class="import-box">
+            <input
+              ref="fileInputRef"
+              type="file"
+              accept=".txt,.md,.markdown,.text,image/*"
+              multiple
+              @change="handleFileImport"
+            />
+            <span>支持豆包导出的 txt/Markdown 纪要，也支持图片附件。</span>
+          </div>
+        </el-form-item>
+
+        <el-form-item label="拍照资料">
+          <PhotoCapture @images-uploaded="handleImagesUploaded" />
+        </el-form-item>
+
+        <el-form-item label="纪要内容">
+          <el-input
+            v-model="form.rawText"
+            type="textarea"
+            :rows="12"
+            placeholder="可以粘贴豆包录音纪要，也可以在导入文本文件后继续编辑。"
+          />
+        </el-form-item>
+
+        <el-form-item>
+          <el-button type="primary" @click="structureContent">整理知识点</el-button>
+          <el-button :disabled="!structured.content" @click="saveNote">保存文档</el-button>
+        </el-form-item>
+      </el-form>
+    </el-card>
+
+    <el-card v-if="structured.content" class="preview-card">
+      <template #header>
+        <div class="preview-header">
+          <h3>整理结果预览</h3>
+          <el-button type="primary" @click="saveNote">保存文档</el-button>
+        </div>
+      </template>
+
+      <div class="summary-block">
+        <h4>核心摘要</h4>
+        <pre>{{ structured.summary }}</pre>
+      </div>
+
+      <div class="knowledge-grid">
+        <div v-for="point in structured.knowledgePoints" :key="point.title" class="knowledge-card">
+          <div class="knowledge-title">
+            <span>{{ point.title }}</span>
+            <el-tag :type="getImportanceType(point.importance)" size="small">
+              {{ getImportanceLabel(point.importance) }}
+            </el-tag>
+          </div>
+          <p>{{ point.content }}</p>
+        </div>
+      </div>
+
+      <div class="document-preview">
+        <h4>完整文档</h4>
+        <pre>{{ structured.content }}</pre>
+      </div>
+    </el-card>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
-import AudioRecorder from '../components/AudioRecorder.vue'
+import { reactive, ref } from 'vue'
 import PhotoCapture from '../components/PhotoCapture.vue'
-import {
-  createNote,
-  extractKnowledgeFromContent,
-  generateQuestionsFromContent,
-  generateSummaryFromContent
-} from '../api/note'
+import { createNote, uploadFile, uploadImage } from '../api/note'
+import { structureNoteContent, type StructuredNote } from '../utils/structureNotes'
 
-interface KnowledgePoint {
-  title: string
-  content: string
-  importance: string
-}
-
-interface Question {
-  type: string
-  question: string
-  options?: string[]
-  answer: string
-  analysis?: string
-}
-
-const activeTab = ref('audio')
-const formRef = ref()
-const photoFormRef = ref()
-const newTag = ref('')
-const availableTags = ref(['数学', '英语', '物理', '化学', '计算机', '历史', '地理'])
-const knowledgePoints = ref<KnowledgePoint[]>([])
-const questions = ref<Question[]>([])
-const processingResult = ref<string | null>(null)
-const uploadedImages = ref<string[]>([])
+const fileInputRef = ref<HTMLInputElement | null>(null)
 
 const form = reactive({
   course: '',
   title: '',
-  content: '',
-  tags: [] as string[],
-  summary: ''
+  rawText: ''
 })
 
-const photoForm = reactive({
-  course: '',
+const uploadedImages = ref<string[]>([])
+const sourceFiles = ref<{ name: string; url: string; type: string }[]>([])
+const structured = reactive<StructuredNote>({
   title: '',
-  content: ''
+  summary: '',
+  content: '',
+  knowledgePoints: []
 })
 
-const handleTagChange = () => {}
-
-const addTag = () => {
-  if (newTag.value && !availableTags.value.includes(newTag.value)) {
-    availableTags.value.push(newTag.value)
-    form.tags.push(newTag.value)
-    newTag.value = ''
-  }
-}
-
-const submitForm = async () => {
-  const response = await createNote({
-    ...form,
-    knowledgePoints: knowledgePoints.value,
-    questions: questions.value
+const readTextFile = (file: File) => {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result || ''))
+    reader.onerror = () => reject(reader.error)
+    reader.readAsText(file, 'utf-8')
   })
-  if (response.data) {
-    window.location.href = '/'
-  }
 }
 
-const savePhotoNote = async () => {
-  const response = await createNote({
-    course: photoForm.course || '未指定课程',
-    title: photoForm.title || `${photoForm.course} - ${new Date().toLocaleDateString()}`,
-    content: photoForm.content || '图片笔记',
-    tags: [],
-    summary: '',
-    imageUrls: uploadedImages.value
+const uploadGenericFile = async (file: File) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  const response = await uploadFile(formData)
+  sourceFiles.value.push({
+    name: response.data.originalName || file.name,
+    url: response.data.fileUrl,
+    type: response.data.type || file.type
   })
-  if (response.data) {
-    window.location.href = '/'
-  }
+  return response.data.fileUrl as string
 }
 
-const generatePhotoSummary = async () => {
-  if (!photoForm.content) {
-    alert('请先输入笔记内容')
-    return
-  }
-  const response = await generateSummaryFromContent(photoForm.content)
-  photoForm.content = response.data.summary
+const uploadImageFile = async (file: File) => {
+  const formData = new FormData()
+  formData.append('image', file)
+  const response = await uploadImage(formData)
+  uploadedImages.value.push(response.data.imageUrl)
+  sourceFiles.value.push({
+    name: response.data.originalName || file.name,
+    url: response.data.imageUrl,
+    type: response.data.type || file.type
+  })
 }
 
-const generateSummary = async () => {
-  if (!form.content) {
-    alert('请先输入笔记内容')
-    return
-  }
-  const response = await generateSummaryFromContent(form.content)
-  form.summary = response.data.summary
-}
+const handleFileImport = async (event: Event) => {
+  const files = Array.from((event.target as HTMLInputElement).files || [])
+  for (const file of files) {
+    if (file.type.startsWith('image/')) {
+      await uploadImageFile(file)
+      continue
+    }
 
-const extractKnowledge = async () => {
-  if (!form.content) {
-    alert('请先输入笔记内容')
-    return
-  }
-  const response = await extractKnowledgeFromContent(form.content)
-  knowledgePoints.value = response.data.knowledgePoints
-}
+    if (/\.(txt|md|markdown|text)$/i.test(file.name) || file.type.startsWith('text/')) {
+      const text = await readTextFile(file)
+      form.rawText = [form.rawText, text].filter(Boolean).join('\n\n')
+      await uploadGenericFile(file)
+      continue
+    }
 
-const generateQuestions = async () => {
-  if (!form.content) {
-    alert('请先输入笔记内容')
-    return
+    await uploadGenericFile(file)
   }
-  const response = await generateQuestionsFromContent(form.content)
-  questions.value = response.data.questions
+
+  if (fileInputRef.value) fileInputRef.value.value = ''
 }
 
 const handleImagesUploaded = (imageUrls: string[]) => {
-  uploadedImages.value = imageUrls
+  uploadedImages.value = [...uploadedImages.value, ...imageUrls]
+  sourceFiles.value.push(
+    ...imageUrls.map((url, index) => ({
+      name: `拍照资料 ${sourceFiles.value.length + index + 1}`,
+      url,
+      type: 'image/jpeg'
+    }))
+  )
 }
 
-const handleProcessingComplete = (noteId: string) => {
-  processingResult.value = noteId
+const structureContent = () => {
+  const result = structureNoteContent({
+    course: form.course,
+    title: form.title,
+    rawText: form.rawText,
+    imageCount: uploadedImages.value.length
+  })
+  Object.assign(structured, result)
 }
 
-const handleProgress = (progress: { step: string; message: string; data?: any }) => {
-  console.log('处理进度:', progress)
-}
+const saveNote = async () => {
+  if (!structured.content) {
+    structureContent()
+  }
 
-const viewNote = (noteId: string) => {
-  window.location.href = `/note/${noteId}`
+  const response = await createNote({
+    course: form.course || '未指定课程',
+    title: structured.title,
+    content: structured.content,
+    tags: ['结构化整理'],
+    summary: structured.summary,
+    sourceType: uploadedImages.value.length && form.rawText ? 'mixed' : uploadedImages.value.length ? 'image' : 'text',
+    sourceFiles: sourceFiles.value,
+    imageUrls: uploadedImages.value,
+    knowledgePoints: structured.knowledgePoints
+  })
+
+  if (response.data?._id) {
+    window.location.href = `/note/${response.data._id}`
+  }
 }
 
 const getImportanceType = (importance: string) => {
   switch (importance) {
     case 'high': return 'danger'
     case 'medium': return 'warning'
-    case 'low': return 'info'
     default: return 'info'
   }
 }
 
-const getQuestionTypeName = (type: string) => {
-  switch (type) {
-    case 'single': return '单选题'
-    case 'multiple': return '多选题'
-    case 'judge': return '判断题'
-    case 'fill': return '填空题'
-    case 'short': return '简答题'
-    default: return '未知题型'
+const getImportanceLabel = (importance: string) => {
+  switch (importance) {
+    case 'high': return '重点'
+    case 'medium': return '一般'
+    default: return '补充'
   }
 }
 </script>
@@ -275,95 +228,76 @@ const getQuestionTypeName = (type: string) => {
 <style scoped>
 .note-create {
   padding: 20px;
-  max-width: 1000px;
+  max-width: 1080px;
   margin: 0 auto;
 }
 
-.processing-result {
+.header,
+.preview-header,
+.knowledge-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+}
+
+.header h2,
+.preview-header h3 {
+  margin: 0;
+}
+
+.header p {
+  margin: 6px 0 0;
+  color: #666;
+}
+
+.import-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #666;
+}
+
+.preview-card {
   margin-top: 20px;
-  padding: 20px;
-  background: #f0f9ff;
-  border-radius: 10px;
 }
 
-.processing-result h3 {
-  margin-bottom: 15px;
+.summary-block,
+.document-preview {
+  margin-bottom: 24px;
 }
 
-.result-section {
-  margin-top: 30px;
-  padding: 20px;
-  background: #f8f9fa;
-  border-radius: 10px;
-}
-
-.result-section h3 {
-  font-size: 18px;
-  margin-bottom: 15px;
-  color: #333;
-}
-
-.kp-title {
-  font-weight: bold;
-  font-size: 16px;
-  margin-bottom: 5px;
-}
-
-.kp-content {
-  font-size: 14px;
-  color: #666;
-}
-
-.question-card {
-  padding: 15px;
-  background: white;
+pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+  padding: 16px;
+  background: #f7f8fa;
   border-radius: 8px;
-  margin-bottom: 15px;
-  border: 1px solid #e9ecef;
+  line-height: 1.7;
 }
 
-.question-header {
-  margin-bottom: 10px;
+.knowledge-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
 }
 
-.question-type {
-  font-weight: bold;
-  color: #409eff;
+.knowledge-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 14px;
+  background: #fff;
 }
 
-.question-content {
-  font-size: 16px;
-  margin-bottom: 10px;
-  color: #333;
+.knowledge-title {
+  font-weight: 600;
 }
 
-.question-options {
-  margin-bottom: 10px;
-}
-
-.option-item {
-  padding: 5px 0;
-  font-size: 14px;
-}
-
-.question-answer {
-  margin-bottom: 5px;
-  font-size: 14px;
-}
-
-.answer-label {
-  font-weight: bold;
-  color: #67c23a;
-}
-
-.question-analysis {
-  font-size: 14px;
-  color: #666;
-  padding-top: 5px;
-  border-top: 1px dashed #ddd;
-}
-
-.analysis-label {
-  font-weight: bold;
+.knowledge-card p {
+  margin: 10px 0 0;
+  color: #555;
+  line-height: 1.6;
 }
 </style>

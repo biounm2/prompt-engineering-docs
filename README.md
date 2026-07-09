@@ -1,21 +1,22 @@
-# 课堂笔记总结应用
+# 课堂资料结构化整理工具
 
-这是一个面向学习场景的课堂笔记工具，支持手动输入、录音转文字、拍照上传，并用 AI 自动生成笔记总结、知识点和练习题。适合把课堂内容快速整理成可复习、可刷题的结构化资料。
+这是一个本地化的学习资料整理工具。新的定位很简单：把豆包“录音纪要”导出的文字稿、课堂零散笔记、图片资料导入进来，然后整理成一份结构清楚、知识点一目了然的复习文档。
+
+项目现在不做实时录音、不做 AI 出题，也不依赖豆包 API。豆包负责录音纪要，你把纪要文件导入本工具，本工具负责规范结构、提取知识点、保存资料和生成可复习的文档。
 
 ## 主要功能
 
-- 手动创建课堂笔记，填写课程、标题、正文和标签。
-- 使用浏览器录音，把语音转成文字，再生成结构化笔记。
-- 使用摄像头拍照上传，把图片作为笔记资料保存。
-- 调用豆包 API 生成 AI 总结、知识点和练习题。
-- 在笔记详情页查看正文、总结、图片、录音、知识点和练习题。
-- 支持练习题逐题作答和查看解析。
+- 导入 `.txt`、`.md`、`.markdown` 等文字纪要文件。
+- 粘贴豆包录音纪要或课堂零散笔记。
+- 导入图片资料，或用摄像头拍照上传板书/课件/手写笔记。
+- 本地整理核心摘要、知识点清单和结构化文档。
+- 保存整理结果，在详情页查看原始附件、图片、摘要、知识点和完整文档。
 
 ## 技术栈
 
-- 前端：Vue 3、Vite、TypeScript、Element Plus、Axios、Transformers.js
-- 后端：Node.js、Express、MongoDB、Mongoose、Multer、Axios
-- AI 能力：豆包 API，浏览器端 Whisper 语音识别辅助能力
+- 前端：Vue 3、Vite、TypeScript、Element Plus、Axios
+- 后端：Node.js、Express、MongoDB、Mongoose、Multer
+- 数据库：MongoDB
 
 ## 项目结构
 
@@ -28,8 +29,6 @@
 │   │   └── Note.js
 │   ├── routes
 │   │   └── notes.js
-│   ├── utils
-│   │   └── doubao.js
 │   ├── server.js
 │   ├── package.json
 │   └── pnpm-lock.yaml
@@ -38,12 +37,11 @@
     │   ├── api
     │   │   └── note.ts
     │   ├── components
-    │   │   ├── AudioRecorder.vue
     │   │   └── PhotoCapture.vue
     │   ├── router
     │   │   └── index.ts
     │   ├── utils
-    │   │   └── speechToText.ts
+    │   │   └── structureNotes.ts
     │   ├── views
     │   │   ├── NoteCreate.vue
     │   │   ├── NoteDetail.vue
@@ -63,13 +61,11 @@
 - Node.js
 - pnpm
 - MongoDB
-- 豆包 API Key
 
 后端环境变量放在 `backend/.env`，这个文件不要提交到 GitHub。
 
 ```text
 MONGODB_URI=mongodb://localhost:27017/note-summary
-DOUBAO_API_KEY=你的豆包APIKey
 PORT=3000
 ```
 
@@ -105,39 +101,37 @@ http://localhost:5173
 
 ## 怎么使用
 
-1. 打开 `http://localhost:5173`。
-2. 点击右上角或页面中的“新建笔记”。
-3. 选择创建方式：
-   - `录音笔记`：允许麦克风权限，录音后转文字，再生成笔记。
-   - `拍照笔记`：允许摄像头权限，拍照上传后保存为图片笔记。
-   - `手动输入`：直接输入课程、标题和正文，然后生成总结、知识点、练习题。
-4. 创建完成后回到列表页，点击笔记卡片查看详情。
-5. 在详情页可以查看 AI 总结、知识点和练习题，并进行答题复习。
+1. 先用豆包的“录音纪要”功能得到文字纪要。
+2. 打开 `http://localhost:5173`。
+3. 点击“新建笔记”。
+4. 导入豆包导出的 `.txt` 或 `.md` 文件，或者直接粘贴纪要文字。
+5. 如果有板书、课件、手写笔记，可以上传图片或现场拍照。
+6. 点击“整理知识点”，预览核心摘要、知识点和完整文档。
+7. 点击“保存文档”，之后可以在列表和详情页查看。
 
 ## 后端接口
 
-- `GET /api/notes`：获取笔记列表。
-- `GET /api/notes/:id`：获取单篇笔记详情。
-- `POST /api/notes`：创建笔记。
-- `PUT /api/notes/:id`：更新笔记。
-- `DELETE /api/notes/:id`：删除笔记。
-- `POST /api/notes/upload-audio`：上传音频。
-- `POST /api/notes/upload-image`：上传图片。
-- `POST /api/notes/generate-summary`：根据原始正文生成总结。
-- `POST /api/notes/generate-knowledge`：根据原始正文提取知识点。
-- `POST /api/notes/generate-questions`：根据原始正文生成练习题。
-- `POST /api/notes/:id/summary`：为已保存笔记重新生成总结。
-- `POST /api/notes/:id/knowledge`：为已保存笔记重新提取知识点。
-- `POST /api/notes/:id/questions`：为已保存笔记重新生成练习题。
+- `GET /api/notes`：获取文档列表。
+- `GET /api/notes/:id`：获取单篇文档详情。
+- `POST /api/notes`：保存结构化文档。
+- `PUT /api/notes/:id`：更新文档。
+- `DELETE /api/notes/:id`：删除文档。
+- `POST /api/notes/upload-file`：上传文字纪要或其他附件。
+- `POST /api/notes/upload-image`：上传图片资料。
 
-## 当前已知优化方向
+## 当前限制
 
-- 后端需要增加请求参数校验，避免直接信任 `req.body`。
-- 上传接口需要限制文件大小和文件类型。
-- 前端应把 `window.location.href` 改成 Vue Router 跳转。
-- 录音笔记需要增加明确的课程输入框。
-- 浏览器端语音识别相关依赖会让前端包变大，后续可以考虑按需加载或放到后端处理。
-- 详情页的编辑功能还需要补完整。
-- 后续可以增加测试和 CI。
+- 不做语音识别：音频转文字交给豆包录音纪要。
+- 不做 OCR：图片会作为资料保存，若要提取图片内容，需要手动补充文字说明。
+- 本地整理规则是启发式规则，不是大模型推理；优点是不需要 API，缺点是语义理解有限。
+
+## 后续优化方向
+
+- 支持导入 `.docx`、`.pdf` 等更多文件格式。
+- 为图片增加可选 OCR 模块，但保持“无外部 API”的默认模式。
+- 增加导出 Markdown / PDF 功能。
+- 把结构化规则做成可配置模板，例如“课堂纪要”“读书笔记”“会议纪要”。
+- 增加编辑功能，允许保存后继续调整知识点。
+- 增加测试和 CI。
 
 更多交接说明见 [REMIND_ME.md](./REMIND_ME.md)。
