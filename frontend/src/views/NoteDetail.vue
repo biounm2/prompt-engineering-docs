@@ -58,7 +58,13 @@
       </div>
 
       <div class="document-section">
-        <h3>结构化文档</h3>
+        <div class="document-header">
+          <h3>结构化文档</h3>
+          <div class="document-actions">
+            <el-button @click="exportMarkdown">导出 Markdown</el-button>
+            <el-button @click="exportPdf">导出 PDF</el-button>
+          </div>
+        </div>
         <pre>{{ note.content }}</pre>
       </div>
 
@@ -73,6 +79,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { deleteNote as deleteNoteApi, getNote } from '../api/note'
+import { downloadMarkdown, openPrintablePdf } from '../utils/exportDocument'
 
 interface KnowledgePoint {
   title: string
@@ -112,6 +119,16 @@ const deleteNote = async () => {
   if (!note.value) return
   await deleteNoteApi(note.value._id)
   window.location.href = '/'
+}
+
+const exportMarkdown = () => {
+  if (!note.value) return
+  downloadMarkdown(note.value.title, note.value.content)
+}
+
+const exportPdf = () => {
+  if (!note.value) return
+  openPrintablePdf(note.value.title, note.value.content)
 }
 
 const formatDate = (dateStr: string) => {
@@ -190,6 +207,25 @@ h3 {
   font-size: 20px;
   margin-bottom: 14px;
   color: #333;
+}
+
+.document-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.document-header h3 {
+  margin-bottom: 0;
+}
+
+.document-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
 }
 
 .image-grid {

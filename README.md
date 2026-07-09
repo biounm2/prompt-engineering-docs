@@ -6,15 +6,16 @@
 
 ## 主要功能
 
-- 导入 `.txt`、`.md`、`.markdown` 等文字纪要文件。
+- 导入 `.txt`、`.md`、`.markdown`、`.docx`、`.pdf` 等纪要文件。
 - 粘贴豆包录音纪要或课堂零散笔记。
 - 导入图片资料，或用摄像头拍照上传板书/课件/手写笔记。
 - 本地整理核心摘要、知识点清单和结构化文档。
 - 保存整理结果，在详情页查看原始附件、图片、摘要、知识点和完整文档。
+- 导出 Markdown 文件，或通过浏览器打印保存为 PDF。
 
 ## 技术栈
 
-- 前端：Vue 3、Vite、TypeScript、Element Plus、Axios
+- 前端：Vue 3、Vite、TypeScript、Element Plus、Axios、Mammoth、PDF.js
 - 后端：Node.js、Express、MongoDB、Mongoose、Multer
 - 数据库：MongoDB
 
@@ -41,6 +42,8 @@
     │   ├── router
     │   │   └── index.ts
     │   ├── utils
+    │   │   ├── exportDocument.ts
+    │   │   ├── importDocuments.ts
     │   │   └── structureNotes.ts
     │   ├── views
     │   │   ├── NoteCreate.vue
@@ -104,10 +107,10 @@ http://localhost:5173
 1. 先用豆包的“录音纪要”功能得到文字纪要。
 2. 打开 `http://localhost:5173`。
 3. 点击“新建笔记”。
-4. 导入豆包导出的 `.txt` 或 `.md` 文件，或者直接粘贴纪要文字。
+4. 导入豆包导出的 `.txt`、`.md`、`.docx` 或 `.pdf` 文件，或者直接粘贴纪要文字。
 5. 如果有板书、课件、手写笔记，可以上传图片或现场拍照。
 6. 点击“整理知识点”，预览核心摘要、知识点和完整文档。
-7. 点击“保存文档”，之后可以在列表和详情页查看。
+7. 可以直接导出 Markdown / PDF，也可以点击“保存文档”，之后在列表和详情页查看。
 
 ## 后端接口
 
@@ -127,9 +130,7 @@ http://localhost:5173
 
 ## 后续优化方向
 
-- 支持导入 `.docx`、`.pdf` 等更多文件格式。
 - 为图片增加可选 OCR 模块，但保持“无外部 API”的默认模式。
-- 增加导出 Markdown / PDF 功能。
 - 把结构化规则做成可配置模板，例如“课堂纪要”“读书笔记”“会议纪要”。
 - 增加编辑功能，允许保存后继续调整知识点。
 - 增加测试和 CI。

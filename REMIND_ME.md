@@ -7,9 +7,9 @@
 新的使用方式是：
 
 1. 用户先用豆包的“录音纪要”能力完成录音和转文字。
-2. 用户把豆包导出的文字纪要、Markdown 文件、零散课堂笔记导入本工具。
+2. 用户把豆包导出的文字纪要、Markdown、docx、pdf 文件或零散课堂笔记导入本工具。
 3. 如果有板书、课件、手写笔记，用户可以上传图片或用摄像头拍照。
-4. 本工具不调用外部 API，只在前端本地用规则整理核心摘要、知识点和结构化复习文档。
+4. 本工具不调用外部 API，只在前端本地抽取文件文字，并用规则整理核心摘要、知识点和结构化复习文档。
 5. 后端负责保存文档、知识点和附件。
 
 ## 当前目录结构
@@ -39,6 +39,8 @@ D:\222
       router
         index.ts          # 列表页、详情页、创建页路由
       utils
+        exportDocument.ts # Markdown 下载和 PDF 打印导出
+        importDocuments.ts # txt/md/docx/pdf 文本抽取
         structureNotes.ts # 本地结构化整理规则
       views
         NoteList.vue
@@ -94,6 +96,8 @@ PORT=3000
 - 移除了练习题/出题流程。
 - 创建页变成导入工具：导入文字纪要、粘贴零散笔记、上传图片或拍照。
 - 新增 `frontend/src/utils/structureNotes.ts`，用本地规则生成摘要、知识点和结构化文档。
+- 新增 `frontend/src/utils/importDocuments.ts`，支持从 txt、Markdown、docx、pdf 中提取文字。
+- 新增 `frontend/src/utils/exportDocument.ts`，支持导出 Markdown 和通过浏览器保存 PDF。
 - 详情页只展示导入资料、图片、摘要、知识点和完整文档。
 
 ## 当前限制
@@ -106,8 +110,7 @@ PORT=3000
 
 最高优先级：
 
-- 增加 Markdown / PDF 导出，让整理结果可以直接交作业或复习。
-- 支持 `.docx`、`.pdf`、`.srt`、`.vtt` 等更多导入格式。
+- 支持 `.srt`、`.vtt` 等字幕/转写格式。
 - 为 `structureNotes.ts` 增加更多模板，例如“课堂笔记”“读书笔记”“会议纪要”。
 - 增加文档编辑功能，允许保存后继续调整标题、摘要、知识点和正文。
 - 增加上传文件类型白名单和更清晰的错误提示。

@@ -27,11 +27,11 @@
             <input
               ref="fileInputRef"
               type="file"
-              accept=".txt,.md,.markdown,.text,image/*"
+              accept=".txt,.md,.markdown,.text,.docx,.pdf,image/*"
               multiple
               @change="handleFileImport"
             />
-            <span>支持豆包导出的 txt/Markdown 纪要，也支持图片附件。</span>
+            <span>支持 txt、Markdown、docx、pdf 纪要文件，也支持图片附件。</span>
           </div>
         </el-form-item>
 
@@ -59,7 +59,11 @@
       <template #header>
         <div class="preview-header">
           <h3>整理结果预览</h3>
-          <el-button type="primary" @click="saveNote">保存文档</el-button>
+          <div class="preview-actions">
+            <el-button @click="exportMarkdown">导出 Markdown</el-button>
+            <el-button @click="exportPdf">导出 PDF</el-button>
+            <el-button type="primary" @click="saveNote">保存文档</el-button>
+          </div>
         </div>
       </template>
 
@@ -92,6 +96,8 @@
 import { reactive, ref } from 'vue'
 import PhotoCapture from '../components/PhotoCapture.vue'
 import { createNote, uploadFile, uploadImage } from '../api/note'
+import { downloadMarkdown, openPrintablePdf } from '../utils/exportDocument'
+import { extractTextFromDocument, isReadableDocument } from '../utils/importDocuments'
 import { structureNoteContent, type StructuredNote } from '../utils/structureNotes'
 
 const fileInputRef = ref<HTMLInputElement | null>(null)
@@ -110,15 +116,6 @@ const structured = reactive<StructuredNote>({
   content: '',
   knowledgePoints: []
 })
-
-const readTextFile = (file: File) => {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(String(reader.result || ''))
-    reader.onerror = () => reject(reader.error)
-    reader.readAsText(file, 'utf-8')
-  })
-}
 
 const uploadGenericFile = async (file: File) => {
   const formData = new FormData()
@@ -152,9 +149,11 @@ const handleFileImport = async (event: Event) => {
       continue
     }
 
-    if (/\.(txt|md|markdown|text)$/i.test(file.name) || file.type.startsWith('text/')) {
-      const text = await readTextFile(file)
-      form.rawText = [form.rawText, text].filter(Boolean).join('\n\n')
+    if (isReadableDocument(file)) {
+      const text = await extractTextFromDocument(file)
+      if (text) {
+        form.rawText = [form.rawText, `## ${file.name}\n${text}`].filter(Boolean).join('\n\n')
+      }
       await uploadGenericFile(file)
       continue
     }
@@ -208,6 +207,16 @@ const saveNote = async () => {
   }
 }
 
+const exportMarkdown = () => {
+  if (!structured.content) structureContent()
+  downloadMarkdown(structured.title, structured.content)
+}
+
+const exportPdf = () => {
+  if (!structured.content) structureContent()
+  openPrintablePdf(structured.title, structured.content)
+}
+
 const getImportanceType = (importance: string) => {
   switch (importance) {
     case 'high': return 'danger'
@@ -239,6 +248,13 @@ const getImportanceLabel = (importance: string) => {
   justify-content: space-between;
   gap: 16px;
   align-items: center;
+}
+
+.preview-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
 }
 
 .header h2,
